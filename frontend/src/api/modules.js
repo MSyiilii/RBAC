@@ -183,6 +183,9 @@ export const entitlementsApi = {
   },
   check(data) {
     return api.post('/api/entitlements/check', data)
+  },  
+  getList(id) {
+    return api.post('/api/entitlements/get-list/'+id)
   },
   grant(data) {
     return api.post('/api/entitlements/grant', data)

@@ -35,3 +35,4 @@ class GrantEntitlementRequest(BaseModel):
 
 class CheckEntitlementRequest(BaseModel):
     user_id: int
+    feature_key: str

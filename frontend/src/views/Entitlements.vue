@@ -105,9 +105,7 @@ async function handleCheckFeature() {
     message.warning('请选择用户')
     return
   }
-  const { data } = await entitlementsApi.check({
-    user_id: uid
-  })
+  const { data } = await entitlementsApi.getList(uid)
   entitlements.value = Array.isArray(data) ? data : []
 }
 
@@ -135,7 +133,8 @@ onMounted(() => {
 
     <a-card title="功能权限搜索" :bordered="false" style="margin-bottom: 24px" v-if="auth.hasPermission('entitlement:grant')">
       <a-space wrap>
-        <a-select v-if="auth.hasPermission('entitlement:grant')" v-model:value="checkUserId" placeholder="选择用户" allow-clear show-search
+        <a-select v-if="auth.hasPermission('entitlement:grant')" v-model:value="checkUserId" placeholder="选择用户"
+          allow-clear show-search
           :filter-option="(input, option) => option.label.toLowerCase().includes(input.toLowerCase())"
           :options="allUsers.map((u) => ({ value: u.id, label: u.username }))" style="width: 200px" />
         <a-button type="primary" @click="handleCheckFeature">
@@ -161,7 +160,8 @@ onMounted(() => {
             </a-tag>
           </template>
           <template v-if="column.key === 'action'">
-            <a-popconfirm v-if="auth.hasPermission('entitlement:revoke')" title="确定要撤销该权益吗？" @confirm="handleRevoke(record)">
+            <a-popconfirm v-if="auth.hasPermission('entitlement:revoke')" title="确定要撤销该权益吗？"
+              @confirm="handleRevoke(record)">
               <a-button size="small" danger>
                 <template #icon>
                   <DeleteOutlined />

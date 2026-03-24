@@ -22,6 +22,13 @@ async def list_entitlements(
 ):
     return await service.get_user_entitlements(db, current_user.id)
 
+@router.post("/get-list/{user_id}")
+async def list_entitlements(
+    user_id: int,
+    db: AsyncSession = Depends(get_db),
+):
+    return await service.get_user_entitlements(db, user_id)
+
 
 @router.post("/check")
 async def check_entitlement(
@@ -29,7 +36,8 @@ async def check_entitlement(
     db: AsyncSession = Depends(get_db),
     _=Depends(require_permission("entitlement:read")),
 ):
-    return await service.get_user_entitlements(db, data.user_id)
+    has = await service.check_entitlement(db, data.user_id, data.feature_key)
+    return {"user_id": data.user_id, "feature_key": data.feature_key, "entitled": has}
 
 
 @router.post(

@@ -137,7 +137,6 @@ user_feature_entitlements  用户功能权益 (source, expires_at, is_active)
 |------|------|------|
 | GET/POST | /api/courses | 课程列表/创建 (大V仅看自己的，课程包含开始/结束时间) |
 | PUT | /api/courses/{id} | 更新课程 (仅创建者) |
-| DELETE | /api/courses/{id} | 删除课程 (仅创建者) |
 | POST | /api/courses/{id}/subscribe | 报名课程（无需请求体，自动授予Pro权益） |
 | GET | /api/courses/{id}/subscribers | 查看学员 (仅课程创建者) |
 | GET | /api/my/subscriptions | 我的订阅列表（含课程名称、类型、Pro到期时间） |
