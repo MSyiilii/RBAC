@@ -183,7 +183,7 @@ onMounted(() => {
         </a-form-item>
         <a-form-item label="功能代码" required>
           <a-select v-model:value="grantForm.feature_key" placeholder="请选择功能" show-search
-            :options="allFeatures.map((f) => ({ value: f.key, label: f.name + ' (' + f.key + ')' }))" />
+          :options="allFeatures.filter((f) => f.is_pro).map((f) => ({ value: f.key, label: f.name + ' (' + f.key + ')' }))" />
         </a-form-item>
         <a-form-item label="来源">
           <a-select v-model:value="grantForm.source">
