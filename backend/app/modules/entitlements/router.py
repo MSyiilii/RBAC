@@ -29,8 +29,7 @@ async def check_entitlement(
     db: AsyncSession = Depends(get_db),
     _=Depends(get_current_user),
 ):
-    has = await service.check_entitlement(db, data.user_id, data.feature_key)
-    return {"user_id": data.user_id, "feature_key": data.feature_key, "entitled": has}
+    return await service.get_user_entitlements(db, data.user_id)
 
 
 @router.post(

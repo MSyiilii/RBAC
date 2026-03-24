@@ -94,34 +94,6 @@ async def revoke_entitlement(db: AsyncSession, entitlement_id: int) -> bool:
     return True
 
 
-async def check_entitlement(
-    db: AsyncSession, user_id: int, feature_key: str
-) -> bool:
-    from app.modules.features.models import Feature
-    feat_result = await db.execute(
-        select(Feature).where(Feature.key == feature_key)
-    )
-    feature = feat_result.scalar_one_or_none()
-    if feature is None:
-        return False
-    if not feature.is_pro:
-        return True
-
-    now = datetime.now(timezone.utc)
-    result = await db.execute(
-        select(UserFeatureEntitlement).where(
-            UserFeatureEntitlement.user_id == user_id,
-            UserFeatureEntitlement.feature_key == feature_key,
-            UserFeatureEntitlement.is_active == True,  # noqa: E712
-        )
-    )
-    ent = result.scalar_one_or_none()
-    if ent is None:
-        return False
-    if ent.expires_at is None:
-        return True
-    exp = _ensure_tz(ent.expires_at)
-    return exp > now
 
 
 async def expire_stale_entitlements(db: AsyncSession) -> int:

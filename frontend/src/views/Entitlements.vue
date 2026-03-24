@@ -12,8 +12,6 @@ const allFeatures = ref([])
 const allUsers = ref([])
 const loading = ref(false)
 const grantModalVisible = ref(false)
-const checkResult = ref(null)
-const checkFeatureKey = ref('')
 const checkUserId = ref(null)
 
 const isAdmin = computed(() => auth.isAdmin)
@@ -102,33 +100,17 @@ async function handleRevoke(record) {
   }
 }
 
-function checkResultDescription(cr) {
-  if (!cr) return ''
-  let s = `用户ID: ${cr.user_id}, 功能: ${cr.feature_key}`
-  if (cr.expires_at) s += `, 到期: ${formatTime(cr.expires_at)}`
-  if (cr.granted_at) s += `, 授予: ${formatTime(cr.granted_at)}`
-  return s
-}
 
 async function handleCheckFeature() {
-  if (!checkFeatureKey.value) {
-    message.warning('请输入功能代码')
-    return
-  }
   const uid = checkUserId.value || auth.user?.id
   if (!uid) {
     message.warning('请选择用户')
     return
   }
-  try {
-    const { data } = await entitlementsApi.check({
-      user_id: uid,
-      feature_key: checkFeatureKey.value
-    })
-    checkResult.value = data
-  } catch (err) {
-    checkResult.value = { entitled: false, reason: err.response?.data?.detail || '检查失败' }
-  }
+  const { data } = await entitlementsApi.check({
+    user_id: uid
+  })
+  entitlements.value = Array.isArray(data) ? data : []
 }
 
 onMounted(() => {
@@ -145,53 +127,31 @@ onMounted(() => {
     <a-page-header title="权益管理" sub-title="管理功能权益的授予与查看">
       <template #extra>
         <a-button v-if="isAdmin" type="primary" @click="openGrantModal">
-          <template #icon><PlusOutlined /></template>
+          <template #icon>
+            <PlusOutlined />
+          </template>
           授予权益
         </a-button>
       </template>
     </a-page-header>
 
-    <a-card title="功能权限检查" :bordered="false" style="margin-bottom: 24px">
+    <a-card title="功能权限搜索" :bordered="false" style="margin-bottom: 24px" v-if="isAdmin">
       <a-space wrap>
-        <a-select
-          v-if="isAdmin"
-          v-model:value="checkUserId"
-          placeholder="选择用户"
-          allow-clear
-          show-search
+        <a-select v-if="isAdmin" v-model:value="checkUserId" placeholder="选择用户" allow-clear show-search
           :filter-option="(input, option) => option.label.toLowerCase().includes(input.toLowerCase())"
-          :options="allUsers.map((u) => ({ value: u.id, label: u.username }))"
-          style="width: 200px"
-        />
-        <a-input
-          v-model:value="checkFeatureKey"
-          placeholder="功能代码（如 chart_advanced）"
-          style="width: 280px"
-          @pressEnter="handleCheckFeature"
-        />
+          :options="allUsers.map((u) => ({ value: u.id, label: u.username }))" style="width: 200px" />
         <a-button type="primary" @click="handleCheckFeature">
-          <template #icon><SearchOutlined /></template>
-          检查权限
+          <template #icon>
+            <SearchOutlined />
+          </template>
+          搜索权限
         </a-button>
       </a-space>
-      <div v-if="checkResult" style="margin-top: 16px">
-        <a-alert
-          :type="checkResult.entitled ? 'success' : 'warning'"
-          :message="checkResult.entitled ? '有访问权限' : '无访问权限'"
-          :description="checkResultDescription(checkResult)"
-          show-icon
-        />
-      </div>
     </a-card>
 
     <a-card title="权益列表" :bordered="false">
-      <a-table
-        :columns="columns"
-        :data-source="entitlements"
-        :loading="loading"
-        :row-key="(r) => r.id"
-        :pagination="{ pageSize: 10, showTotal: (t) => `共 ${t} 条` }"
-      >
+      <a-table :columns="columns" :data-source="entitlements" :loading="loading" :row-key="(r) => r.id"
+        :pagination="{ pageSize: 10, showTotal: (t) => `共 ${t} 条` }">
         <template #bodyCell="{ column, record }">
           <template v-if="column.key === 'source'">
             <a-tag>{{ getSourceText(record.source) }}</a-tag>
@@ -205,7 +165,9 @@ onMounted(() => {
           <template v-if="column.key === 'action'">
             <a-popconfirm v-if="isAdmin" title="确定要撤销该权益吗？" @confirm="handleRevoke(record)">
               <a-button size="small" danger>
-                <template #icon><DeleteOutlined /></template>
+                <template #icon>
+                  <DeleteOutlined />
+                </template>
                 撤销
               </a-button>
             </a-popconfirm>
@@ -214,29 +176,16 @@ onMounted(() => {
       </a-table>
     </a-card>
 
-    <a-modal
-      v-model:open="grantModalVisible"
-      title="授予权益"
-      @ok="handleGrant"
-      :destroyOnClose="true"
-    >
+    <a-modal v-model:open="grantModalVisible" title="授予权益" @ok="handleGrant" :destroyOnClose="true">
       <a-form layout="vertical">
         <a-form-item label="选择用户" required>
-          <a-select
-            v-model:value="grantForm.user_id"
-            placeholder="请选择用户"
-            show-search
+          <a-select v-model:value="grantForm.user_id" placeholder="请选择用户" show-search
             :filter-option="(input, option) => option.label.toLowerCase().includes(input.toLowerCase())"
-            :options="allUsers.map((u) => ({ value: u.id, label: u.username }))"
-          />
+            :options="allUsers.map((u) => ({ value: u.id, label: u.username }))" />
         </a-form-item>
         <a-form-item label="功能代码" required>
-          <a-select
-            v-model:value="grantForm.feature_key"
-            placeholder="请选择功能"
-            show-search
-            :options="allFeatures.map((f) => ({ value: f.key, label: f.name + ' (' + f.key + ')' }))"
-          />
+          <a-select v-model:value="grantForm.feature_key" placeholder="请选择功能" show-search
+            :options="allFeatures.map((f) => ({ value: f.key, label: f.name + ' (' + f.key + ')' }))" />
         </a-form-item>
         <a-form-item label="来源">
           <a-select v-model:value="grantForm.source">
@@ -247,13 +196,8 @@ onMounted(() => {
           </a-select>
         </a-form-item>
         <a-form-item label="到期时间">
-          <a-date-picker
-            v-model:value="grantForm.expires_at"
-            show-time
-            placeholder="留空为永久"
-            style="width: 100%"
-            value-format="YYYY-MM-DDTHH:mm:ss"
-          />
+          <a-date-picker v-model:value="grantForm.expires_at" show-time placeholder="留空为永久" style="width: 100%"
+            value-format="YYYY-MM-DDTHH:mm:ss" />
         </a-form-item>
       </a-form>
     </a-modal>

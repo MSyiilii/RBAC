@@ -86,9 +86,8 @@ async def seed_data():
             perm_objects["course:manage"],
         ]
 
-        pro_role = Role(name="pro_user", description="Pro 会员 — 专业功能")
 
-        db.add_all([admin_role, user_role, creator_role, pro_role])
+        db.add_all([admin_role, user_role, creator_role])
         await db.flush()
 
         admin_user = User(
@@ -96,7 +95,7 @@ async def seed_data():
             email="admin@openvlab.cn",
             hashed_password=hash_password("admin123"),
         )
-        admin_user.roles = [admin_role]
+        admin_user.roles = [admin_role,creator_role]
 
         demo_user = User(
             username="user1",
@@ -112,14 +111,8 @@ async def seed_data():
         )
         creator_user.roles = [user_role, creator_role]
 
-        pro_user = User(
-            username="pro1",
-            email="pro1@openvlab.cn",
-            hashed_password=hash_password("pro123"),
-        )
-        pro_user.roles = [user_role, pro_role]
 
-        db.add_all([admin_user, demo_user, creator_user, pro_user])
+        db.add_all([admin_user, demo_user, creator_user])
 
         for key, name, desc, is_pro in FEATURES:
             db.add(Feature(key=key, name=name, description=desc, is_pro=is_pro))

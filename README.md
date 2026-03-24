@@ -48,6 +48,7 @@ RBAC/
 ### 1. 启动后端
 
 ```bash
+# 环境python 3.10
 cd backend
 pip install -r requirements.txt
 python -m uvicorn app.main:app --reload --port 8000
@@ -58,6 +59,7 @@ python -m uvicorn app.main:app --reload --port 8000
 ### 2. 启动前端
 
 ```bash
+# 环境node 16.16.0
 cd frontend
 npm install
 npm run dev
@@ -79,7 +81,6 @@ python -m pytest tests/ -v
 | admin | admin123 | admin | 运营管理员 — 全部权限 |
 | user1 | user123 | user | 注册用户 — 基础权限 |
 | creator1 | creator123 | user, creator | 大V — 可创建/管理课程 |
-| pro1 | pro123 | user, pro_user | Pro 会员 — 专业功能 |
 
 ## 数据库设计
 
@@ -202,5 +203,5 @@ user_feature_entitlements  用户功能权益 (source, expires_at, is_active)
 - **前后端 API 对齐**: AI 分别生成前后端时产生了路径和参数不一致的问题（如 `/api` 前缀、字段名不匹配），需要统一修复
 - **课程模块重构**: 根据业务需求将课程有效期从订阅维度迁移到课程维度，并实现报名联动 Pro 权益的事务化逻辑
 - **Vite 版本**: 初始生成的 Vite 6 不兼容 Node 16，降级到 Vite 4
-- **种子数据设计**: 根据 OpenVlab 实际业务（Pro 模块、教学中心、社区排行）定制了功能点和积分规则
+- **种子数据设计**: 根据 OpenVlab 实际业务定制了功能点和积分规则
 - **安全边界**: 前端路由守卫只做体验优化，真正的安全校验全部在后端完成
