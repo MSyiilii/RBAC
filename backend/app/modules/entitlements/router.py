@@ -18,7 +18,7 @@ router = APIRouter(prefix="/entitlements", tags=["entitlements"])
 @router.get("", response_model=List[EntitlementOut])
 async def list_entitlements(
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_permission("entitlement:read")),
 ):
     return await service.get_user_entitlements(db, current_user.id)
 
@@ -27,7 +27,7 @@ async def list_entitlements(
 async def check_entitlement(
     data: CheckEntitlementRequest,
     db: AsyncSession = Depends(get_db),
-    _=Depends(get_current_user),
+    _=Depends(require_permission("entitlement:read")),
 ):
     return await service.get_user_entitlements(db, data.user_id)
 

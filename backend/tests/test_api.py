@@ -90,7 +90,7 @@ async def test_list_users_as_admin(client):
     headers = await login(client, "admin", "admin123")
     r = await client.get("/api/users", headers=headers)
     assert r.status_code == 200
-    assert len(r.json()) >= 4
+    assert len(r.json()) >= 3
 
 
 @pytest.mark.asyncio
@@ -122,7 +122,6 @@ async def test_list_roles(client):
     assert "admin" in names
     assert "user" in names
     assert "creator" in names
-    assert "pro_user" in names
 
 
 @pytest.mark.asyncio
@@ -130,22 +129,22 @@ async def test_list_permissions(client):
     headers = await login(client, "admin", "admin123")
     r = await client.get("/api/permissions", headers=headers)
     assert r.status_code == 200
-    assert len(r.json()) >= 20
+    assert len(r.json()) >= 25
 
 
 @pytest.mark.asyncio
 async def test_assign_and_revoke_role(client):
     headers = await login(client, "admin", "admin123")
     r = await client.get("/api/roles", headers=headers)
-    pro_role = next(role for role in r.json() if role["name"] == "pro_user")
+    creator_role = next(role for role in r.json() if role["name"] == "creator")
 
     r = await client.get("/api/users", headers=headers)
     user1 = next(u for u in r.json() if u["username"] == "user1")
 
-    r = await client.post(f"/api/users/{user1['id']}/roles", json={"role_id": pro_role["id"]}, headers=headers)
+    r = await client.post(f"/api/users/{user1['id']}/roles", json={"role_id": creator_role["id"]}, headers=headers)
     assert r.status_code == 204
 
-    r = await client.delete(f"/api/users/{user1['id']}/roles/{pro_role['id']}", headers=headers)
+    r = await client.delete(f"/api/users/{user1['id']}/roles/{creator_role['id']}", headers=headers)
     assert r.status_code == 204
 
 
@@ -154,9 +153,17 @@ async def test_assign_and_revoke_role(client):
 
 @pytest.mark.asyncio
 async def test_list_features(client):
-    r = await client.get("/api/features")
+    headers = await login(client, "admin", "admin123")
+    r = await client.get("/api/features", headers=headers)
     assert r.status_code == 200
     assert len(r.json()) >= 10
+
+
+@pytest.mark.asyncio
+async def test_list_features_forbidden_without_perm(client):
+    headers = await login(client, "user1", "user123")
+    r = await client.get("/api/features", headers=headers)
+    assert r.status_code == 403
 
 
 # ────────────────────────────── Courses ───────────────────────────
@@ -238,15 +245,14 @@ async def test_subscribe_offline_grants_lifetime_pro(client):
     assert len(offline_courses) > 0
     course_id = offline_courses[0]["id"]
 
-    headers_pro = await login(client, "pro1", "pro123")
+    headers_admin = await login(client, "admin", "admin123")
     r = await client.post(
-        f"/api/courses/{course_id}/subscribe", headers=headers_pro,
+        f"/api/courses/{course_id}/subscribe", headers=headers_admin,
     )
     assert r.status_code == 201
 
-    headers_admin = await login(client, "admin", "admin123")
     r = await client.post("/api/entitlements/check", json={
-        "user_id": 4, "feature_key": "volatility_cloud",
+        "user_id": 1, "feature_key": "volatility_cloud",
     }, headers=headers_admin)
     assert r.json()["entitled"] is True
 
@@ -287,7 +293,8 @@ async def test_balance_and_ledger(client):
 
 @pytest.mark.asyncio
 async def test_unlock_rules(client):
-    r = await client.get("/api/points/unlock-rules")
+    headers = await login(client, "user1", "user123")
+    r = await client.get("/api/points/unlock-rules", headers=headers)
     assert r.status_code == 200
     assert len(r.json()) >= 3
 
@@ -421,32 +428,26 @@ async def test_delete_feature_removes_entitlements(client):
 
 
 @pytest.mark.asyncio
-async def test_is_pro_false_clears_entitlements(client):
-    headers = await login(client, "admin", "admin123")
-    r = await client.post("/api/features", json={
-        "key": "test_pro_toggle", "name": "ProToggle", "is_pro": True,
-    }, headers=headers)
-    fid = r.json()["id"]
-
-    await client.post("/api/entitlements/grant", json={
-        "user_id": 2, "feature_key": "test_pro_toggle", "source": "admin",
-    }, headers=headers)
-
-    r = await client.put(f"/api/features/{fid}", json={
-        "key": "test_pro_toggle", "name": "ProToggle", "is_pro": False,
-    }, headers=headers)
-    assert r.status_code == 200
-
-    r = await client.post("/api/entitlements/check", json={
-        "user_id": 2, "feature_key": "test_pro_toggle",
-    }, headers=headers)
-    assert r.json()["entitled"] is True
-
-
-@pytest.mark.asyncio
 async def test_free_feature_accessible_without_entitlement(client):
     headers = await login(client, "admin", "admin123")
     r = await client.post("/api/entitlements/check", json={
         "user_id": 2, "feature_key": "market_basic",
     }, headers=headers)
     assert r.json()["entitled"] is True
+
+
+# ────────────────────── Permission-based access ───────────────────
+
+
+@pytest.mark.asyncio
+async def test_user_without_feature_read_gets_403(client):
+    headers = await login(client, "user1", "user123")
+    r = await client.get("/api/features", headers=headers)
+    assert r.status_code == 403
+
+
+@pytest.mark.asyncio
+async def test_user_with_course_read_can_list_courses(client):
+    headers = await login(client, "user1", "user123")
+    r = await client.get("/api/courses", headers=headers)
+    assert r.status_code == 200

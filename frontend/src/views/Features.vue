@@ -1,10 +1,12 @@
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, onMounted, createVNode } from 'vue'
 import { message, Modal } from 'ant-design-vue'
 import { featuresApi } from '../api/modules'
+import { useAuthStore } from '../stores/auth'
 import { formatTime } from '../utils/format'
 import { PlusOutlined, EditOutlined, DeleteOutlined, CrownOutlined, ExclamationCircleOutlined } from '@ant-design/icons-vue'
-import { createVNode } from 'vue'
+
+const auth = useAuthStore()
 
 const features = ref([])
 const loading = ref(false)
@@ -131,7 +133,7 @@ onMounted(() => {
   <div>
     <a-page-header title="功能管理" sub-title="管理平台功能模块（变更会实时影响用户权益）">
       <template #extra>
-        <a-button type="primary" @click="openCreate">
+        <a-button v-if="auth.hasPermission('feature:create')" type="primary" @click="openCreate">
           <template #icon><PlusOutlined /></template>
           新建功能
         </a-button>
@@ -156,11 +158,11 @@ onMounted(() => {
 
           <template v-if="column.key === 'action'">
             <a-space>
-              <a-button size="small" @click="openEdit(record)">
+              <a-button v-if="auth.hasPermission('feature:update')" size="small" @click="openEdit(record)">
                 <template #icon><EditOutlined /></template>
                 编辑
               </a-button>
-              <a-button size="small" danger @click="handleDelete(record)">
+              <a-button v-if="auth.hasPermission('feature:delete')" size="small" danger @click="handleDelete(record)">
                 <template #icon><DeleteOutlined /></template>
                 删除
               </a-button>

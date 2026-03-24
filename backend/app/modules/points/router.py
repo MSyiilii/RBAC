@@ -22,7 +22,7 @@ router = APIRouter(prefix="/points", tags=["points"])
 async def earn_points(
     data: EarnPointsRequest,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_permission("points:read")),
 ):
     try:
         return await service.earn_points(db, current_user.id, data.action_key)
@@ -35,7 +35,7 @@ async def earn_points(
 @router.get("/balance")
 async def get_balance(
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_permission("points:read")),
 ):
     balance = await service.get_balance(db, current_user.id)
     return {"user_id": current_user.id, "balance": balance}
@@ -44,13 +44,16 @@ async def get_balance(
 @router.get("/ledger", response_model=List[LedgerOut])
 async def get_ledger(
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_permission("points:read")),
 ):
     return await service.get_ledger(db, current_user.id)
 
 
 @router.get("/unlock-rules", response_model=List[UnlockRuleOut])
-async def list_unlock_rules(db: AsyncSession = Depends(get_db)):
+async def list_unlock_rules(
+    db: AsyncSession = Depends(get_db),
+    _=Depends(require_permission("points:read")),
+):
     return await service.get_all_unlock_rules(db)
 
 
@@ -69,7 +72,7 @@ async def create_unlock_rule(
 async def check_unlock(
     feature_key: str,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_permission("points:read")),
 ):
     return await service.check_unlock(db, current_user.id, feature_key)
 
@@ -78,7 +81,7 @@ async def check_unlock(
 async def do_unlock(
     feature_key: str,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_permission("points:read")),
 ):
     try:
         return await service.do_unlock(db, current_user.id, feature_key)
@@ -89,7 +92,10 @@ async def do_unlock(
 
 
 @router.get("/rules", response_model=List[PointRuleOut])
-async def list_point_rules(db: AsyncSession = Depends(get_db)):
+async def list_point_rules(
+    db: AsyncSession = Depends(get_db),
+    _=Depends(require_permission("points:read")),
+):
     return await service.get_all_point_rules(db)
 
 

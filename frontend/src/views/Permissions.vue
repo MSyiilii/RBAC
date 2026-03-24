@@ -2,8 +2,11 @@
 import { ref, reactive, onMounted } from 'vue'
 import { message } from 'ant-design-vue'
 import { permissionsApi } from '../api/modules'
+import { useAuthStore } from '../stores/auth'
 import { formatTime } from '../utils/format'
 import { PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons-vue'
+
+const auth = useAuthStore()
 
 const permissions = ref([])
 const loading = ref(false)
@@ -89,7 +92,7 @@ onMounted(() => {
   <div>
     <a-page-header title="权限管理" sub-title="管理系统权限标识">
       <template #extra>
-        <a-button type="primary" @click="openCreate">
+        <a-button v-if="auth.hasPermission('permission:create')" type="primary" @click="openCreate">
           <template #icon><PlusOutlined /></template>
           新建权限
         </a-button>
@@ -107,11 +110,12 @@ onMounted(() => {
         <template #bodyCell="{ column, record }">
           <template v-if="column.key === 'action'">
             <a-space>
-              <a-button size="small" @click="openEdit(record)">
+              <a-button v-if="auth.hasPermission('permission:update')" size="small" @click="openEdit(record)">
                 <template #icon><EditOutlined /></template>
                 编辑
               </a-button>
               <a-popconfirm
+                v-if="auth.hasPermission('permission:delete')"
                 title="确定要删除该权限吗？"
                 @confirm="handleDelete(record)"
               >

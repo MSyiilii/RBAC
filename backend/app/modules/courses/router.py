@@ -3,7 +3,7 @@ from typing import List
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.dependencies import get_db, get_current_user, require_role
+from app.dependencies import get_db, get_current_user, require_permission
 from app.modules.courses import service
 from app.modules.courses.service import SubscribeError
 from app.modules.courses.schemas import CourseCreate, CourseOut, SubscriptionOut
@@ -15,11 +15,19 @@ my_router = APIRouter(prefix="/my", tags=["my-subscriptions"])
 _ERROR_MAP = {"forbidden": 403, "conflict": 409, "bad_request": 400}
 
 
+def _has_perm(user: User, key: str) -> bool:
+    for role in user.roles:
+        for perm in role.permissions:
+            if perm.key == key:
+                return True
+    return False
+
+
 @router.post("", response_model=CourseOut, status_code=status.HTTP_201_CREATED)
 async def create_course(
     data: CourseCreate,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(require_role("creator")),
+    current_user: User = Depends(require_permission("course:create")),
 ):
     try:
         return await service.create_course(
@@ -38,10 +46,11 @@ async def create_course(
 @router.get("", response_model=List[CourseOut])
 async def list_courses(
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_permission("course:read")),
 ):
-    is_creator = any(r.name == "creator" for r in current_user.roles)
-    if is_creator:
+    if _has_perm(current_user, "course:manage"):
+        return await service.list_all_courses(db)
+    if _has_perm(current_user, "course:create"):
         return await service.list_courses_by_creator(db, current_user.id)
     return await service.list_all_courses(db)
 
@@ -50,7 +59,7 @@ async def list_courses(
 async def get_course(
     course_id: int,
     db: AsyncSession = Depends(get_db),
-    _=Depends(get_current_user),
+    _=Depends(require_permission("course:read")),
 ):
     course = await service.get_course_by_id(db, course_id)
     if not course:
@@ -63,12 +72,11 @@ async def update_course(
     course_id: int,
     data: CourseCreate,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(require_role("creator")),
+    current_user: User = Depends(require_permission("course:manage")),
 ):
     try:
         course = await service.update_course(
-            db,
-            course_id,
+            db, course_id,
             creator_id=current_user.id,
             title=data.title,
             description=data.description,
@@ -90,7 +98,7 @@ async def update_course(
 async def delete_course(
     course_id: int,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(require_role("creator")),
+    current_user: User = Depends(require_permission("course:manage")),
 ):
     if not await service.delete_course(db, course_id, current_user.id):
         raise HTTPException(
@@ -128,12 +136,12 @@ async def subscribe(
 async def list_subscribers(
     course_id: int,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(require_role("creator")),
+    current_user: User = Depends(require_permission("course:manage")),
 ):
     course = await service.get_course_by_id(db, course_id)
     if not course:
         raise HTTPException(status_code=404, detail="Course not found")
-    if course.creator_id != current_user.id:
+    if course.creator_id != current_user.id and not _has_perm(current_user, "user:read"):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="You can only view subscribers for your own courses",
@@ -172,7 +180,7 @@ def _enrich_sub(sub, course):
 @router.post("/expire-check")
 async def expire_check(
     db: AsyncSession = Depends(get_db),
-    _=Depends(require_role("admin")),
+    _=Depends(require_permission("course:manage")),
 ):
     count = await service.check_and_expire_subscriptions(db)
     return {"expired_count": count}

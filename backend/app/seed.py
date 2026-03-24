@@ -21,15 +21,19 @@ PERMISSIONS = [
     ("permission:update", "更新权限"),
     ("permission:delete", "删除权限"),
     ("permission:assign", "分配权限"),
+    ("feature:read", "查看功能"),
     ("feature:create", "创建功能"),
     ("feature:update", "更新功能"),
     ("feature:delete", "删除功能"),
+    ("course:read", "查看课程"),
+    ("course:create", "创建课程"),
+    ("course:manage", "管理课程"),
+    ("points:read", "查看积分"),
     ("points:manage", "管理积分规则"),
+    ("entitlement:read", "查看权益"),
     ("entitlement:grant", "授予权益"),
     ("entitlement:revoke", "撤销权益"),
     ("entitlement:manage", "管理权益"),
-    ("course:create", "创建课程"),
-    ("course:manage", "管理课程"),
 ]
 
 FEATURES = [
@@ -79,13 +83,20 @@ async def seed_data():
         admin_role.permissions = list(perm_objects.values())
 
         user_role = Role(name="user", description="注册用户 — 基础权限")
+        user_role.permissions = [
+            perm_objects["course:read"],
+            perm_objects["points:read"],
+            perm_objects["entitlement:read"],
+        ]
 
         creator_role = Role(name="creator", description="大V — 课程管理")
         creator_role.permissions = [
+            perm_objects["course:read"],
             perm_objects["course:create"],
             perm_objects["course:manage"],
+            perm_objects["points:read"],
+            perm_objects["entitlement:read"],
         ]
-
 
         db.add_all([admin_role, user_role, creator_role])
         await db.flush()
@@ -95,7 +106,7 @@ async def seed_data():
             email="admin@openvlab.cn",
             hashed_password=hash_password("admin123"),
         )
-        admin_user.roles = [admin_role,creator_role]
+        admin_user.roles = [admin_role]
 
         demo_user = User(
             username="user1",
@@ -110,7 +121,6 @@ async def seed_data():
             hashed_password=hash_password("creator123"),
         )
         creator_user.roles = [user_role, creator_role]
-
 
         db.add_all([admin_user, demo_user, creator_user])
 

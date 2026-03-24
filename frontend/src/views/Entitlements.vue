@@ -1,5 +1,5 @@
 <script setup>
-import { ref, reactive, onMounted, computed } from 'vue'
+import { ref, reactive, onMounted } from 'vue'
 import { message } from 'ant-design-vue'
 import { entitlementsApi, featuresApi, usersApi } from '../api/modules'
 import { formatTime } from '../utils/format'
@@ -13,8 +13,6 @@ const allUsers = ref([])
 const loading = ref(false)
 const grantModalVisible = ref(false)
 const checkUserId = ref(null)
-
-const isAdmin = computed(() => auth.isAdmin)
 
 const grantForm = reactive({
   user_id: null,
@@ -115,7 +113,7 @@ async function handleCheckFeature() {
 
 onMounted(() => {
   fetchEntitlements()
-  if (isAdmin.value) {
+  if (auth.hasPermission('entitlement:grant')) {
     fetchFeatures()
     fetchUsers()
   }
@@ -126,7 +124,7 @@ onMounted(() => {
   <div>
     <a-page-header title="权益管理" sub-title="管理功能权益的授予与查看">
       <template #extra>
-        <a-button v-if="isAdmin" type="primary" @click="openGrantModal">
+        <a-button v-if="auth.hasPermission('entitlement:grant')" type="primary" @click="openGrantModal">
           <template #icon>
             <PlusOutlined />
           </template>
@@ -135,16 +133,16 @@ onMounted(() => {
       </template>
     </a-page-header>
 
-    <a-card title="功能权限搜索" :bordered="false" style="margin-bottom: 24px" v-if="isAdmin">
+    <a-card title="功能权限搜索" :bordered="false" style="margin-bottom: 24px" v-if="auth.hasPermission('entitlement:grant')">
       <a-space wrap>
-        <a-select v-if="isAdmin" v-model:value="checkUserId" placeholder="选择用户" allow-clear show-search
+        <a-select v-if="auth.hasPermission('entitlement:grant')" v-model:value="checkUserId" placeholder="选择用户" allow-clear show-search
           :filter-option="(input, option) => option.label.toLowerCase().includes(input.toLowerCase())"
           :options="allUsers.map((u) => ({ value: u.id, label: u.username }))" style="width: 200px" />
         <a-button type="primary" @click="handleCheckFeature">
           <template #icon>
             <SearchOutlined />
           </template>
-          搜索权限
+          搜索权益
         </a-button>
       </a-space>
     </a-card>
@@ -163,7 +161,7 @@ onMounted(() => {
             </a-tag>
           </template>
           <template v-if="column.key === 'action'">
-            <a-popconfirm v-if="isAdmin" title="确定要撤销该权益吗？" @confirm="handleRevoke(record)">
+            <a-popconfirm v-if="auth.hasPermission('entitlement:revoke')" title="确定要撤销该权益吗？" @confirm="handleRevoke(record)">
               <a-button size="small" danger>
                 <template #icon>
                   <DeleteOutlined />

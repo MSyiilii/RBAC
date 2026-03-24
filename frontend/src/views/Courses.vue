@@ -1,5 +1,5 @@
 <script setup>
-import { ref, reactive, onMounted, computed } from 'vue'
+import { ref, reactive, onMounted } from 'vue'
 import { message } from 'ant-design-vue'
 import { coursesApi } from '../api/modules'
 import { useAuthStore } from '../stores/auth'
@@ -15,8 +15,6 @@ const subscriberModalVisible = ref(false)
 const editingCourse = ref(null)
 const selectedCourse = ref(null)
 const subscribers = ref([])
-
-const isCreatorOrAdmin = computed(() => auth.isCreator || auth.isAdmin)
 
 const form = reactive({
   title: '',
@@ -170,7 +168,7 @@ onMounted(() => {
   <div>
     <a-page-header title="课程管理" sub-title="管理课程及学员报名">
       <template #extra>
-        <a-button v-if="isCreatorOrAdmin" type="primary" @click="openCreate">
+        <a-button v-if="auth.hasPermission('course:create')" type="primary" @click="openCreate">
           <template #icon><PlusOutlined /></template>
           新建课程
         </a-button>
@@ -199,11 +197,11 @@ onMounted(() => {
 
           <template v-if="column.key === 'action'">
             <a-space>
-              <a-button v-if="isCreatorOrAdmin" size="small" @click="openEdit(record)">
+              <a-button v-if="auth.hasPermission('course:manage')" size="small" @click="openEdit(record)">
                 <template #icon><EditOutlined /></template>
                 编辑
               </a-button>
-              <a-button size="small" type="primary" ghost @click="viewSubscribers(record)">
+              <a-button v-if="auth.hasPermission('course:manage')" size="small" type="primary" ghost @click="viewSubscribers(record)">
                 <template #icon><TeamOutlined /></template>
                 学员
               </a-button>
@@ -229,15 +227,15 @@ onMounted(() => {
                 </a-button>
               </a-popconfirm>
 
-              <a-popconfirm
-                v-if="isCreatorOrAdmin"
+              <!-- <a-popconfirm
+                v-if="auth.hasPermission('course:manage')"
                 title="确定要删除该课程吗？"
                 @confirm="handleDelete(record)"
               >
                 <a-button size="small" danger>
                   <template #icon><DeleteOutlined /></template>
                 </a-button>
-              </a-popconfirm>
+              </a-popconfirm> -->
             </a-space>
           </template>
         </template>
@@ -255,7 +253,7 @@ onMounted(() => {
           <a-input v-model:value="form.title" placeholder="请输入课程名称" />
         </a-form-item>
         <a-form-item label="课程类型" required>
-          <a-radio-group v-model:value="form.course_type">
+          <a-radio-group v-model:value="form.course_type" :disabled="modalVisible">
             <a-radio value="online">线上课（报名获一年 Pro）</a-radio>
             <a-radio value="offline">线下课（报名获终身 Pro）</a-radio>
           </a-radio-group>

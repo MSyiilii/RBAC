@@ -30,7 +30,7 @@ RBAC/
 │   │       ├── points/          # 积分规则/流水/解锁
 │   │       └── entitlements/    # 权益授予/撤销/检查/过期回收
 │   ├── tests/
-│   │   └── test_api.py          # 30 项集成测试
+│   │   └── test_api.py          # 32 项集成测试
 │   └── requirements.txt
 ├── frontend/
 │   └── src/
@@ -171,15 +171,40 @@ user_feature_entitlements  用户功能权益 (source, expires_at, is_active)
 ## 权限体系设计要点
 
 1. **RBAC 核心链路**: User → Roles → Permissions → API 端点保护
-2. **数据范围隔离**: 大V 只能管理自己名下课程（`creator_id == current_user.id`）
-3. **课程报名联动 Pro 权益**: 报名课程时动态查询 `features.is_pro=true` 的功能集合，在同一事务中创建订阅记录和 Pro 功能权益（线下课终身、线上课一年）
-4. **报名约束**: 课程创建者不能报名自己的课程（403）；同一用户不能重复报名同一课程（409）
-5. **唯一权益**: 同一用户同一功能只保留一条权益记录（`(user_id, feature_key)` 唯一约束）；新授权按顺延合并（已有终身则保持终身；两边都是有限期则在当前到期基础上叠加新时长）
-6. **功能管理联动权益**: 删除功能同步清除所有用户的该功能权益；修改 `key` 同步迁移权益记录；`is_pro` 从 Pro 改为免费时清除权益（免费功能无需权益即可访问）；从免费改为 Pro 不做历史回填
-7. **访问判定**: `check_entitlement` 先查功能是否免费，免费直接放行；Pro 功能才需要检查活跃权益记录
-8. **到期双保险**: 读时判定 + 定时回收任务（`expire_stale_entitlements`）
-9. **积分事务**: 积分变动走流水表事务，每日限额控制，解锁功能同时写入权益（按 `trial_days` 顺延）
-10. **时间格式**: 所有前端时间统一转换为东八区 `yyyy-MM-dd HH:mm:ss` 格式显示
+2. **前端完全基于权限标识**: 菜单、路由、页面按钮全部由权限标识（如 `user:read`、`role:create`）控制，不再依赖角色名
+3. **权限映射规则**: 每个模块的 `read` 权限控制菜单可见与页面进入，`create/update/delete/assign/manage` 控制页面内具体操作按钮
+4. **数据范围隔离**: 大V 只能管理自己名下课程（`creator_id == current_user.id`）
+5. **课程报名联动 Pro 权益**: 报名课程时动态查询 `features.is_pro=true` 的功能集合，在同一事务中创建订阅记录和 Pro 功能权益（线下课终身、线上课一年）
+6. **报名约束**: 课程创建者不能报名自己的课程（403）；同一用户不能重复报名同一课程（409）
+7. **唯一权益**: 同一用户同一功能只保留一条权益记录；新授权按顺延合并（已有终身则保持终身；两边都是有限期则在当前到期基础上叠加新时长）
+8. **功能管理联动权益**: 删除功能同步清除权益；改 `key` 同步迁移；`is_pro` 从 Pro 改为免费时清除权益
+9. **访问判定**: `check_entitlement` 先查功能是否免费，免费直接放行；Pro 功能才需要检查活跃权益记录
+10. **到期双保险**: 读时判定 + 定时回收任务
+11. **积分事务**: 积分变动走流水表事务，每日限额控制，解锁功能同时写入权益（按 `trial_days` 顺延）
+12. **时间格式**: 所有前端时间统一转换为东八区 `yyyy-MM-dd HH:mm:ss` 格式显示
+
+## 前端权限映射表
+
+| 权限标识 | 菜单/页面 | 页面内操作 |
+|----------|-----------|------------|
+| `user:read` | 用户管理 | 查看用户列表 |
+| `user:create/update/delete` | — | 新建/编辑/删除用户 |
+| `role:read` | 角色管理 | 查看角色列表 |
+| `role:create/update/delete` | — | 新建/编辑/删除角色 |
+| `role:assign` | — | 给用户分配/撤销角色 |
+| `permission:read` | 权限管理 | 查看权限列表 |
+| `permission:create/update/delete` | — | 新建/编辑/删除权限 |
+| `permission:assign` | — | 给角色分配/撤销权限 |
+| `feature:read` | 功能管理 | 查看功能列表 |
+| `feature:create/update/delete` | — | 新建/编辑/删除功能 |
+| `course:read` | 课程管理 | 查看课程列表 |
+| `course:create` | — | 新建课程 |
+| `course:manage` | — | 编辑/删除课程、查看学员 |
+| `points:read` | 积分中心 | 查看余额/流水/规则 |
+| `points:manage` | — | 管理积分规则 |
+| `entitlement:read` | 权益管理 | 查看权益列表 |
+| `entitlement:grant/revoke` | — | 授予/撤销权益 |
+| `entitlement:manage` | — | 批量过期回收 |
 
 ## AI 工具使用说明
 
@@ -195,12 +220,14 @@ user_feature_entitlements  用户功能权益 (source, expires_at, is_active)
 4. 逐步修复 API 路径不匹配、时区比较、前后端数据结构对齐等问题
 5. 重构课程模块：引入课程开始/结束时间，移除宽限期逻辑，实现报名课程自动授予 Pro 权益
 6. 实现课程与权益一致性：禁止重复报名/创建者自报名，按 is_pro 动态授予，功能增删改联动权益，唯一权益+续期合并
-7. 编写 30 项集成测试，全部通过
+7. 前端权限标识化：菜单、路由、按钮全部改为由权限标识驱动，不再依赖角色名
+8. 编写 32 项集成测试，全部通过
 
 ### 对 AI 产出的判断、修改和取舍
 
 - **时区处理**: AI 生成的 datetime 比较代码没有处理 SQLite 存储的 naive datetime 与 Python 的 aware datetime 之间的兼容性，手动修复了 `check_entitlement` 和 `expire_stale_entitlements` 中的比较逻辑
 - **前后端 API 对齐**: AI 分别生成前后端时产生了路径和参数不一致的问题（如 `/api` 前缀、字段名不匹配），需要统一修复
+- **移除权益check**: 将前后端的check权益逻辑换成List权限操作
 - **课程模块重构**: 根据业务需求将课程有效期从订阅维度迁移到课程维度，并实现报名联动 Pro 权益的事务化逻辑
 - **Vite 版本**: 初始生成的 Vite 6 不兼容 Node 16，降级到 Vite 4
 - **种子数据设计**: 根据 OpenVlab 实际业务定制了功能点和积分规则

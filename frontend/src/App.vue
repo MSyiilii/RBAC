@@ -29,14 +29,14 @@ const isLoginPage = computed(() => route.path === '/')
 const menuItems = computed(() => {
   const items = [
     { key: '/dashboard', icon: 'DashboardOutlined', label: '仪表盘', show: true },
-    { key: '/users', icon: 'UserOutlined', label: '用户管理', show: auth.isAdmin },
-    { key: '/roles', icon: 'SafetyOutlined', label: '角色管理', show: auth.isAdmin },
-    { key: '/permissions', icon: 'LockOutlined', label: '权限管理', show: auth.isAdmin },
-    { key: '/features', icon: 'AppstoreOutlined', label: '功能管理', show: auth.isAdmin },
-    { key: '/courses', icon: 'ReadOutlined', label: '课程管理', show: true },
+    { key: '/users', icon: 'UserOutlined', label: '用户管理', show: auth.hasPermission('user:read') },
+    { key: '/roles', icon: 'SafetyOutlined', label: '角色管理', show: auth.hasPermission('role:read') },
+    { key: '/permissions', icon: 'LockOutlined', label: '权限管理', show: auth.hasPermission('permission:read') },
+    { key: '/features', icon: 'AppstoreOutlined', label: '功能管理', show: auth.hasPermission('feature:read') },
+    { key: '/courses', icon: 'ReadOutlined', label: '课程管理', show: auth.hasPermission('course:read') },
     { key: '/courses/my', icon: 'StarOutlined', label: '我的订阅', show: true },
-    { key: '/points', icon: 'TrophyOutlined', label: '积分中心', show: true },
-    { key: '/entitlements', icon: 'GiftOutlined', label: '权益管理', show: true }
+    { key: '/points', icon: 'TrophyOutlined', label: '积分中心', show: auth.hasPermission('points:read') },
+    { key: '/entitlements', icon: 'GiftOutlined', label: '权益管理', show: auth.hasPermission('entitlement:read') }
   ]
   return items.filter((item) => item.show)
 })
@@ -102,7 +102,7 @@ function onMenuClick({ key }) {
         </div>
         <div class="header-right">
           <span class="username">
-            <UserOutlined style="color: white;" /> <span style="color: white;">{{ auth.username }}</span>
+            <UserOutlined /> {{ auth.username }}
           </span>
           <a-button type="link" danger @click="auth.logout()">
             <template #icon><LogoutOutlined /></template>
@@ -166,7 +166,7 @@ body {
 
 .username {
   font-size: 14px;
-  color: #333;
+  color: #fff;
 }
 
 .app-content {

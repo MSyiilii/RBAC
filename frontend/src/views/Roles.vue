@@ -2,8 +2,11 @@
 import { ref, reactive, onMounted } from 'vue'
 import { message } from 'ant-design-vue'
 import { rolesApi, permissionsApi } from '../api/modules'
+import { useAuthStore } from '../stores/auth'
 import { formatTime } from '../utils/format'
 import { PlusOutlined, EditOutlined, DeleteOutlined, SettingOutlined } from '@ant-design/icons-vue'
+
+const auth = useAuthStore()
 
 const roles = ref([])
 const allPermissions = ref([])
@@ -129,7 +132,7 @@ onMounted(() => {
   <div>
     <a-page-header title="角色管理" sub-title="管理系统角色及权限分配">
       <template #extra>
-        <a-button type="primary" @click="openCreate">
+        <a-button v-if="auth.hasPermission('role:create')" type="primary" @click="openCreate">
           <template #icon><PlusOutlined /></template>
           新建角色
         </a-button>
@@ -150,12 +153,13 @@ onMounted(() => {
               v-for="perm in (record.permissions || [])"
               :key="perm.id"
               color="green"
-              closable
+              :closable="auth.hasPermission('permission:assign')"
               @close="revokePermission(record.id, perm.id)"
             >
               {{ perm.name }}
             </a-tag>
             <a-tag
+              v-if="auth.hasPermission('permission:assign')"
               style="border-style: dashed; cursor: pointer"
               @click="openPermModal(record)"
             >
@@ -165,15 +169,16 @@ onMounted(() => {
 
           <template v-if="column.key === 'action'">
             <a-space>
-              <a-button size="small" @click="openEdit(record)">
+              <a-button v-if="auth.hasPermission('role:update')" size="small" @click="openEdit(record)">
                 <template #icon><EditOutlined /></template>
                 编辑
               </a-button>
-              <a-button size="small" @click="openPermModal(record)">
+              <a-button v-if="auth.hasPermission('permission:assign')" size="small" @click="openPermModal(record)">
                 <template #icon><SettingOutlined /></template>
                 权限
               </a-button>
               <a-popconfirm
+                v-if="auth.hasPermission('role:delete')"
                 title="确定要删除该角色吗？"
                 @confirm="handleDelete(record)"
               >

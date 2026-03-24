@@ -2,8 +2,11 @@
 import { ref, reactive, onMounted } from 'vue'
 import { message } from 'ant-design-vue'
 import { usersApi, rolesApi } from '../api/modules'
+import { useAuthStore } from '../stores/auth'
 import { formatTime } from '../utils/format'
 import { PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons-vue'
+
+const auth = useAuthStore()
 
 const users = ref([])
 const allRoles = ref([])
@@ -141,7 +144,7 @@ onMounted(() => {
   <div>
     <a-page-header title="用户管理" sub-title="管理系统用户及角色分配">
       <template #extra>
-        <a-button type="primary" @click="openCreate">
+        <a-button v-if="auth.hasPermission('user:create')" type="primary" @click="openCreate">
           <template #icon><PlusOutlined /></template>
           新建用户
         </a-button>
@@ -162,12 +165,13 @@ onMounted(() => {
               v-for="role in (record.roles || [])"
               :key="role.id"
               color="blue"
-              closable
+              :closable="auth.hasPermission('role:assign')"
               @close="revokeRole(record.id, role.id)"
             >
               {{ role.name }}
             </a-tag>
             <a-tag
+              v-if="auth.hasPermission('role:assign')"
               style="border-style: dashed; cursor: pointer"
               @click="openRoleModal(record)"
             >
@@ -177,11 +181,12 @@ onMounted(() => {
 
           <template v-if="column.key === 'action'">
             <a-space>
-              <a-button size="small" @click="openEdit(record)">
+              <a-button v-if="auth.hasPermission('user:update')" size="small" @click="openEdit(record)">
                 <template #icon><EditOutlined /></template>
                 编辑
               </a-button>
               <a-popconfirm
+                v-if="auth.hasPermission('user:delete')"
                 title="确定要删除该用户吗？"
                 @confirm="handleDelete(record)"
               >

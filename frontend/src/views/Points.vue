@@ -2,7 +2,10 @@
 import { ref, onMounted } from 'vue'
 import { message } from 'ant-design-vue'
 import { pointsApi } from '../api/modules'
+import { useAuthStore } from '../stores/auth'
 import { formatTime } from '../utils/format'
+
+const auth = useAuthStore()
 import {
   TrophyOutlined,
   CalendarOutlined,

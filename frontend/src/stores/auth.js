@@ -12,8 +12,6 @@ export const useAuthStore = defineStore('auth', {
 
   getters: {
     isLoggedIn: (state) => !!state.token,
-    isAdmin: (state) => (state.user?.roles || []).some((r) => r.name === 'admin'),
-    isCreator: (state) => (state.user?.roles || []).some((r) => r.name === 'creator'),
     username: (state) => state.user?.username || '',
     roles: (state) => state.user?.roles || [],
     permissions() {
@@ -28,6 +26,14 @@ export const useAuthStore = defineStore('auth', {
   },
 
   actions: {
+    hasPermission(key) {
+      return this.permissions.includes(key)
+    },
+
+    hasAnyPermission(keys) {
+      return keys.some((k) => this.permissions.includes(k))
+    },
+
     async login(credentials) {
       try {
         const { data } = await authApi.login(credentials)
