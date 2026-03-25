@@ -74,6 +74,51 @@ cd backend
 python -m pytest tests/ -v
 ```
 
+## Docker 部署
+
+### 1. 构建镜像
+
+```bash
+# 构建后端镜像
+cd backend
+docker build -t rbac-backend .
+
+# 构建前端镜像（需先在本地打包 dist）
+cd frontend
+npm install && npm run build
+docker build -t rbac-frontend .
+```
+
+### 2. 运行容器
+
+```bash
+# 先启动后端（前端依赖后端 API）
+docker run -d --name rbac-backend -p 8000:8000 rbac-backend
+
+# 再启动前端
+docker run -d --name rbac-frontend -p 5173:80 rbac-frontend
+```
+
+### 3. 访问
+
+- 前端页面：http://localhost:5173
+- 后端 API / Swagger 文档：http://localhost:8000/docs
+
+### 4. 停止与清理
+
+```bash
+docker stop rbac-frontend rbac-backend
+docker rm rbac-frontend rbac-backend
+```
+
+### 说明
+
+- 前端容器内 nginx 监听 `80`，通过 `-p 5173:80` 映射到宿主机 `5173` 端口。
+- 后端容器内 uvicorn 监听 `8000`，通过 `-p 8000:8000` 映射到宿主机 `8000` 端口。
+- 前端页面在浏览器中通过 `http://localhost:8000` 调用后端 API，因此两个容器需运行在同一台宿主机上。
+- SQLite 数据库文件保存在后端容器内部，删除容器后数据会丢失；如需持久化可通过 `docker run -v` 挂载宿主机目录。
+- 后端首次启动时会自动创建数据库并注入种子数据（预置账号与权限）。
+
 ## 预置账号
 
 | 用户名 | 密码 | 角色 | 说明 |

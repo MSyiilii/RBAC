@@ -253,7 +253,7 @@ onMounted(() => {
           <a-input v-model:value="form.title" placeholder="请输入课程名称" />
         </a-form-item>
         <a-form-item label="课程类型" required>
-          <a-radio-group v-model:value="form.course_type" :disabled="modalVisible">
+          <a-radio-group v-model:value="form.course_type" :disabled="modalVisible&&editingCourse!=null">
             <a-radio value="online">线上课（报名获一年 Pro）</a-radio>
             <a-radio value="offline">线下课（报名获终身 Pro）</a-radio>
           </a-radio-group>
